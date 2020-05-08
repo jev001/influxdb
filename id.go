@@ -3,6 +3,7 @@ package influxdb
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"strconv"
 	"unsafe"
@@ -40,6 +41,7 @@ type IDGenerator interface {
 //
 // It errors if the input string does not match a valid ID.
 func IDFromString(str string) (*ID, error) {
+	fmt.Println("str was ", str)
 	var id ID
 	err := id.DecodeFromString(str)
 	if err != nil {

@@ -2,8 +2,10 @@ package label
 
 import (
 	"context"
+	"strings"
 
 	"github.com/influxdata/influxdb/v2"
+	"github.com/influxdata/influxdb/v2/kv"
 )
 
 type Service struct {
@@ -18,39 +20,40 @@ func NewService(st *Store) influxdb.LabelService {
 
 // CreateLabel creates a new label.
 func (s *Service) CreateLabel(ctx context.Context, l *influxdb.Label) error {
-	// err := s.kv.Update(ctx, func(tx kv.Tx) error {
-	// 	if err := l.Validate(); err != nil {
-	// 		return &influxdb.Error{
-	// 			Code: influxdb.EInvalid,
-	// 			Err:  err,
-	// 		}
-	// 	}
+	if err := l.Validate(); err != nil {
+		return &influxdb.Error{
+			Code: influxdb.EInvalid,
+			Err:  err,
+		}
+	}
 
-	// 	l.Name = strings.TrimSpace(l.Name)
+	l.Name = strings.TrimSpace(l.Name)
 
-	// 	if err := s.uniqueLabelName(ctx, tx, l); err != nil {
-	// 		return err
-	// 	}
+	err := s.store.Update(ctx, func(tx kv.Tx) error {
+		if err := s.uniqueLabelName(ctx, tx, l); err != nil {
+			return err
+		}
 
-	// 	l.ID = s.IDGenerator.ID()
+		l.ID = s.store.IDGen.ID()
 
-	// 	if err := s.putLabel(ctx, tx, l); err != nil {
-	// 		return err
-	// 	}
+		if err := s.store.CreateLabel(ctx, tx, l); err != nil {
+			return err
+		}
 
-	// 	if err := s.createUserResourceMappingForOrg(ctx, tx, l.OrgID, l.ID, influxdb.LabelsResourceType); err != nil {
-	// 		return err
-	// 	}
+		// if err := s.createUserResourceMappingForOrg(ctx, tx, l.OrgID, l.ID, influxdb.LabelsResourceType); err != nil {
+		// 	return err
+		// }
 
-	// 	return nil
-	// })
+		return nil
+	})
 
 	// if err != nil {
 	// 	return &influxdb.Error{
 	// 		Err: err,
 	// 	}
 	// }
-	return nil
+	// todo (al) make sure that the above functions all return influxdb error types
+	return err
 }
 
 // FindLabelByID finds a label by its ID
